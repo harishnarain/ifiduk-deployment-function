@@ -1,15 +1,8 @@
-const mongoose = require('mongoose');
+const db = require('../config/dbConfig');
 
 module.exports = async function (context, req) {
-  mongoose.connect(process.env.MongoDbConnectionString, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-  mongoose.Promise = global.Promise;
-  mongoose.connection.on('error', (err) => {
-    context.log(`[ERROR]: ${err.message}`);
-  });
   const Product = require('../models/Product');
+  db();
 
   context.log('Getting Products...');
 
