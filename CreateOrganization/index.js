@@ -15,7 +15,7 @@ module.exports = async function (context, req) {
       body: 'A request body is required!',
     };
   }
-  const email = req.body.email;
+  const email = req.body.email.toLowerCase();
 
   // Find email in organizations collections name field
   let org;
