@@ -90,19 +90,27 @@ module.exports = async function (context, req) {
 
   // Create subscription
   try {
-    const { _id, subscriptionName, subscriptionProductId, orgId } = await Subscription.create({
+    const {
+      _id,
+      name: subName,
+      productId: subProductId,
+      orgId: subOrgId,
+      status: subStatus,
+    } = await Subscription.create({
       name: name,
       productId: productId,
       orgId: org._id,
+      status: 'Pending',
     });
     await Organization.findByIdAndUpdate(org._id, { $push: { subscriptions: _id } }, { new: true });
     return {
       status: 201,
       body: {
         _id: _id,
-        name: subscriptionName,
-        productId: subscriptionProductId,
-        orgId: orgId,
+        name: subName,
+        productId: subProductId,
+        orgId: subOrgId,
+        status: subStatus,
       },
     };
   } catch (err) {

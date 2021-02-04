@@ -16,6 +16,10 @@ const SubscriptionSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Product',
   },
+  status: {
+    type: String,
+    required: false,
+  },
 });
 
 const Subscription = mongoose.model('Subscription', SubscriptionSchema);
