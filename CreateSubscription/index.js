@@ -1,5 +1,6 @@
 const db = require('../config/dbConfig');
 const validate = require('../shared/validate');
+const queueDeployment = require('../shared/queueDeployment');
 
 module.exports = async function (context, req) {
   const Subscription = require('../models/Subscription');
@@ -103,15 +104,21 @@ module.exports = async function (context, req) {
       status: 'Pending',
     });
     await Organization.findByIdAndUpdate(org._id, { $push: { subscriptions: _id } }, { new: true });
+
+    const createdSub = {
+      _id: _id,
+      name: subName,
+      productId: subProductId,
+      orgId: subOrgId,
+      status: subStatus,
+    };
+
+    const message = await queueDeployment(createdSub);
+    context.log(message);
+
     return {
       status: 201,
-      body: {
-        _id: _id,
-        name: subName,
-        productId: subProductId,
-        orgId: subOrgId,
-        status: subStatus,
-      },
+      body: createdSub,
     };
   } catch (err) {
     return {
