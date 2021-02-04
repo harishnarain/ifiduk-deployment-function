@@ -9,10 +9,24 @@ module.exports = async function (context, req) {
   // Check if organization name already exits
   // Extract email from user claims
   // Temporarily providing in request body for dev
+  if (!req.body) {
+    return {
+      status: 400,
+      body: 'A request body is required!',
+    };
+  }
   const email = req.body.email;
 
   // Find email in organizations collections name field
-  const org = await Organization.findOne({ name: email });
+  let org;
+  try {
+    org = await Organization.findOne({ name: email });
+  } catch (err) {
+    return {
+      status: 500,
+      body: 'An error occured processing requests.',
+    };
+  }
 
   // Create org name if one doesn't already exist
   if (!org) {
