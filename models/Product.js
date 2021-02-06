@@ -13,12 +13,23 @@ const ProductSchema = new Schema({
     required: false,
   },
   frontend: {
-    type: Map,
-    of: String,
+    image: {
+      type: String,
+    },
+    env: {
+      type: Array,
+    },
   },
   backend: {
-    type: Map,
-    of: String,
+    image: {
+      type: String,
+    },
+    env: {
+      type: Array,
+    },
+    port: {
+      type: Number,
+    },
   },
 });
 

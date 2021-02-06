@@ -105,6 +105,52 @@ module.exports = async function (context, req) {
     });
     await Organization.findByIdAndUpdate(org._id, { $push: { subscriptions: _id } }, { new: true });
 
+    // Prepare deployment message
+    const deploymentMessage = {
+      subscriptionId: _id,
+      frontend: {
+        name: `${_id}_fe`,
+      },
+      backend: {
+        name: `${_id}_be`,
+      },
+    };
+
+    // Create object for product
+    const product = await Product.findById(productId);
+
+    // Add container image names for frontend and backend
+    deploymentMessage.frontend.image = product.frontend.image;
+    deploymentMessage.backend.image = product.backend.image;
+
+    // Add ports to backend
+    deploymentMessage.backend.port = product.backend.port;
+
+    // Add environment variables to frontend and backend
+    if (product.frontend.env.length > 0) {
+      deploymentMessage.frontend.env = [];
+      product.frontend.env.forEach((env) => {
+        const key = Object.keys(env)[0];
+        let value;
+        if (env[key].includes('##BACKEND_HOST##')) {
+          value = env[key].replace('##BACKEND_HOST##', `${_id}_be`);
+        } else {
+          value = env[key];
+        }
+
+        const newEnv = {};
+        newEnv[key] = value;
+        deploymentMessage.frontend.env.push(newEnv);
+      });
+    }
+
+    if (product.backend.env.length > 0) {
+      deploymentMessage.backend.env = product.backend.env;
+    }
+
+    const message = await queueDeployment(deploymentMessage);
+    context.log(message);
+
     const createdSub = {
       _id: _id,
       name: subName,
@@ -112,9 +158,6 @@ module.exports = async function (context, req) {
       orgId: subOrgId,
       status: subStatus,
     };
-
-    const message = await queueDeployment(createdSub);
-    context.log(message);
 
     return {
       status: 201,

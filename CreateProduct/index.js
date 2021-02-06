@@ -36,7 +36,7 @@ module.exports = async function (context, req) {
   } catch (err) {
     return {
       status: 500,
-      body: `An error occured creating the product\n{err}`,
+      body: `An error occured creating the product\n${err}`,
     };
   }
 };
