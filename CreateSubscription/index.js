@@ -149,7 +149,6 @@ module.exports = async function (context, req) {
     }
 
     const message = await queueDeployment(deploymentMessage);
-    context.log(message);
 
     const createdSub = {
       _id: _id,
