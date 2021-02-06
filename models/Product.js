@@ -8,10 +8,17 @@ const ProductSchema = new Schema({
     unique: true,
     required: 'Name is required',
   },
-
   description: {
     type: String,
     required: false,
+  },
+  frontend: {
+    type: Map,
+    of: String,
+  },
+  backend: {
+    type: Map,
+    of: String,
   },
 });
 
