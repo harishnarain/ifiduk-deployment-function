@@ -107,6 +107,7 @@ module.exports = async function (context, req) {
 
     // Prepare deployment message
     const deploymentMessage = {
+      name: name,
       subscriptionId: _id,
       frontend: {
         name: `${_id}_fe`,
