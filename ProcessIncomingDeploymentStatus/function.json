@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "name": "deploymentStatusMessage",
+      "type": "serviceBusTrigger",
+      "direction": "in",
+      "queueName": "post-deployment",
+      "connection": "ServiceBusConnectionString"
+    }
+  ]
+}
