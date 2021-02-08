@@ -9,7 +9,6 @@ module.exports = async function (context, req) {
   db();
 
   context.log('Creating Subscription...');
-
   // Check to ensure a request body exists
   if (!req.body) {
     return {
@@ -18,11 +17,11 @@ module.exports = async function (context, req) {
     };
   }
 
-  // Extract email from user claims
+  // Extract oid from user claims
   // Temporarily providing in request body for dev
   const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
 
-  // Extract org based on email
+  // Extract org based on oid
   let org;
   try {
     org = await Organization.findOne({ name: userIdentifier });

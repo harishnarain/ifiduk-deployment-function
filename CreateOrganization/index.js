@@ -15,7 +15,7 @@ module.exports = async function (context, req) {
       body: 'A request body is required!',
     };
   }
-  const userIdentifier = req.body.oid.toLowerCase();
+  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
   const email = req.body.email.toLowerCase();
 
   // Find oid in organizations collections name field
