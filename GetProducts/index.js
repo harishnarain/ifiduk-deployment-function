@@ -6,8 +6,21 @@ module.exports = async function (context, req) {
 
   context.log('Getting Products...');
 
+  // Generate query
+  let query = '';
+
+  if (req.query.name) {
+    query = new RegExp('^' + req.query.name, 'i');
+  }
+
   try {
-    const products = await Product.find();
+    let products;
+    if (query) {
+      products = await Product.find({ name: { $regex: query } });
+    } else {
+      products = await Product.find();
+    }
+    context.log(products);
 
     return {
       status: 200,
