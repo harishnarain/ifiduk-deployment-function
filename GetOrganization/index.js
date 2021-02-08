@@ -18,10 +18,11 @@ module.exports = async function (context, req) {
       body: 'No query parameter found!',
     };
   }
+  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
 
-  // Find email in organizations collections name field
+  // Find oid in organizations collections name field
   try {
-    const org = await Organization.findOne({ name: email });
+    const org = await Organization.findOne({ name: userIdentifier });
     if (org) {
       return {
         status: 200,

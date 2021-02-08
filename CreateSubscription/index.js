@@ -20,12 +20,12 @@ module.exports = async function (context, req) {
 
   // Extract email from user claims
   // Temporarily providing in request body for dev
-  const email = req.body.email.toLowerCase();
+  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
 
   // Extract org based on email
   let org;
   try {
-    org = await Organization.findOne({ name: email });
+    org = await Organization.findOne({ name: userIdentifier });
   } catch (err) {
     return {
       status: 500,

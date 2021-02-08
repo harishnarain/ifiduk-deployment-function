@@ -7,7 +7,7 @@ module.exports = async function (context, req) {
   context.log('Creating Organization...');
 
   // Check if organization name already exits
-  // Extract email from user claims
+  // Extract oid from user claims
   // Temporarily providing in request body for dev
   if (!req.body) {
     return {
@@ -15,12 +15,13 @@ module.exports = async function (context, req) {
       body: 'A request body is required!',
     };
   }
+  const userIdentifier = req.body.oid.toLowerCase();
   const email = req.body.email.toLowerCase();
 
-  // Find email in organizations collections name field
+  // Find oid in organizations collections name field
   let org;
   try {
-    org = await Organization.findOne({ name: email });
+    org = await Organization.findOne({ name: userIdentifier });
   } catch (err) {
     return {
       status: 500,
@@ -32,7 +33,7 @@ module.exports = async function (context, req) {
   if (!org) {
     // Generate org object
     const newOrg = {
-      name: email,
+      name: userIdentifier,
       technicalContact: email,
     };
     try {
