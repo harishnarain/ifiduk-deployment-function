@@ -1,6 +1,7 @@
 const db = require('../config/dbConfig');
 const validate = require('../shared/validate');
 const queueDeployment = require('../shared/queueDeployment');
+const { create } = require('../models/Subscription');
 
 module.exports = async function (context, req) {
   const Subscription = require('../models/Subscription');
@@ -106,6 +107,7 @@ module.exports = async function (context, req) {
 
     // Prepare deployment message
     const deploymentMessage = {
+      action: 'create',
       name: name,
       subscriptionId: _id,
       frontend: {
