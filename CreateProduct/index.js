@@ -1,42 +1,44 @@
-const db = require('../config/dbConfig');
+const express = require('express');
+const createHandler = require('azure-function-express').createHandler;
+const passport = require('passport');
+const app = express();
+app.use(require('body-parser').urlencoded({ extended: true }));
 
-module.exports = async function (context, req) {
-  const Product = require('../models/Product');
-  db();
+const { createProduct } = require('../controllers/ProductController');
+const auth = require('../config/auth.json');
+const BearerStrategy = require('passport-azure-ad').BearerStrategy;
 
-  context.log('Creating Product...');
-
-  // Check to ensure a request body exists
-  if (!req.body) {
-    return {
-      status: 400,
-      body: 'A request body is required',
-    };
-  }
-
-  // Create product
-  try {
-    const { _id, name, description, frontend, backend } = await Product.create({
-      name: req.body.name,
-      description: req.body.description,
-      frontend: { ...req.body.frontend },
-      backend: { ...req.body.backend },
-    });
-
-    return {
-      status: 201,
-      body: {
-        _id,
-        name,
-        description,
-        frontend,
-        backend,
-      },
-    };
-  } catch (err) {
-    return {
-      status: 500,
-      body: `An error occured creating the product\n${err}`,
-    };
-  }
+const options = {
+  identityMetadata: `https://${auth.credentials.tenantName}.b2clogin.com/${auth.credentials.tenantName}.onmicrosoft.com/${auth.policies.policyName}/${auth.metadata.version}/${auth.metadata.discovery}`,
+  clientID: auth.credentials.clientID,
+  audience: auth.credentials.clientID,
+  policyName: auth.policies.policyName,
+  isB2C: auth.settings.isB2C,
+  validateIssuer: auth.settings.validateIssuer,
+  loggingLevel: auth.settings.loggingLevel,
+  passReqToCallback: auth.settings.passReqToCallback,
 };
+
+const bearerStrategy = new BearerStrategy(options, (token, done) => {
+  // Send user info using the second argument
+  done(null, {}, token);
+});
+
+app.use(passport.initialize());
+
+passport.use(bearerStrategy);
+
+app.post(
+  '/api/products',
+  passport.authenticate('oauth-bearer', { session: false }),
+  async (req, res) => {
+    try {
+      const product = await createProduct(req, res);
+      res.status(product.status).json(product.body);
+    } catch (err) {
+      res.status(err.status).json(err.body);
+    }
+  }
+);
+
+module.exports = createHandler(app);
