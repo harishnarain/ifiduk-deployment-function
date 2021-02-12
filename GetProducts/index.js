@@ -1,35 +1,18 @@
-const db = require('../config/dbConfig');
+const express = require('express');
+const createHandler = require('azure-function-express').createHandler;
+const app = express();
+app.use(require('body-parser').urlencoded({ extended: true }));
 
-module.exports = async function (context, req) {
-  const Product = require('../models/Product');
-  db();
+const { getProducts } = require('../controllers/ProductController');
 
-  context.log('Getting Products...');
-
-  // Generate query
-  let query = '';
-
-  if (req.query.name) {
-    query = new RegExp('^' + req.query.name, 'i');
-  }
-
+app.get('/api/products', async (req, res) => {
   try {
-    let products;
-    if (query) {
-      products = await Product.find({ name: { $regex: query } });
-    } else {
-      products = await Product.find();
-    }
-    context.log(products);
+    const products = await getProducts(req, res);
 
-    return {
-      status: 200,
-      body: products,
-    };
+    res.status(products.status).json(products.body);
   } catch (err) {
-    return {
-      status: 400,
-      body: 'Error getting products!',
-    };
+    res.status(err.status).json(err.body);
   }
-};
+});
+
+module.exports = createHandler(app);
