@@ -1,71 +1,54 @@
-const db = require('../config/dbConfig');
-const queueDeployment = require('../shared/queueDeployment');
+const express = require('express');
+const createHandler = require('azure-function-express').createHandler;
+const passport = require('passport');
+const app = express();
+app.use(require('body-parser').urlencoded({ extended: true }));
 
-module.exports = async function (context, req) {
-  const Subscription = require('../models/Subscription');
-  const Organization = require('../models/Organization');
-  db();
+const { deleteSubscription } = require('../controllers/SubscriptionController');
+const auth = require('../config/auth.json');
+const BearerStrategy = require('passport-azure-ad').BearerStrategy;
 
-  context.log('Deleting Subscription...');
-
-  // Extract oid from user claims
-  // Temporarily providing in request body for dev
-  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
-
-  // Extract org based on oid
-  let org;
-  try {
-    org = await Organization.findOne({ name: userIdentifier });
-  } catch (err) {
-    return {
-      status: 500,
-      body: 'An error occured processing your request.',
-    };
-  }
-
-  // Check if org exits
-  if (!org) {
-    return {
-      status: 400,
-      body: 'Error determining organization',
-    };
-  }
-
-  let sub;
-  // Check if subscription exists
-  try {
-    sub = await Subscription.findById(req.params.id);
-  } catch (err) {
-    return {
-      status: 404,
-      body: `Subscription ${req.params.id} does not exists!`,
-    };
-  }
-
-  // Delete subscription
-  try {
-    // Update the subscription to status deleting
-    sub.status = 'Deleting';
-    await sub.save();
-
-    // Prepare deployment message
-    const deploymentMessage = {
-      action: 'delete',
-      subscriptionId: sub._id,
-      name: sub.name,
-    };
-
-    // Send message to deployment queue
-    const message = await queueDeployment(deploymentMessage);
-
-    return {
-      status: 202,
-      body: message,
-    };
-  } catch {
-    return {
-      status: 500,
-      body: `An error occurred deleting the subscription\n${err}`,
-    };
-  }
+const options = {
+  identityMetadata: `https://${auth.credentials.tenantName}.b2clogin.com/${auth.credentials.tenantName}.onmicrosoft.com/${auth.policies.policyName}/${auth.metadata.version}/${auth.metadata.discovery}`,
+  clientID: auth.credentials.clientID,
+  audience: auth.credentials.clientID,
+  policyName: auth.policies.policyName,
+  isB2C: auth.settings.isB2C,
+  validateIssuer: auth.settings.validateIssuer,
+  loggingLevel: auth.settings.loggingLevel,
+  passReqToCallback: auth.settings.passReqToCallback,
 };
+
+const bearerStrategy = new BearerStrategy(options, (token, done) => {
+  // Send user info using the second argument
+  done(null, {}, token);
+});
+
+app.use(passport.initialize());
+
+passport.use(bearerStrategy);
+
+//enable CORS (for testing only -remove in production/deployment)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Authorization, Origin, X-Requested-With, Content-Type, Accept'
+  );
+  next();
+});
+
+app.delete(
+  '/api/subscriptions/:id',
+  passport.authenticate('oauth-bearer', { session: false }),
+  async (req, res) => {
+    try {
+      const subscription = await deleteSubscription(req, res);
+      res.status(subscription.status).json(subscription.body);
+    } catch (err) {
+      res.status(err.status).json(err.body);
+    }
+  }
+);
+
+module.exports = createHandler(app);
