@@ -1,55 +1,44 @@
-const db = require('../config/dbConfig');
+const express = require('express');
+const createHandler = require('azure-function-express').createHandler;
+const passport = require('passport');
+const app = express();
+app.use(require('body-parser').urlencoded({ extended: true }));
 
-module.exports = async function (context, req) {
-  const Subscription = require('../models/Subscription');
-  const Organization = require('../models/Organization');
-  db();
+const { getSubscriptions } = require('../controllers/SubscriptionController');
+const auth = require('../config/auth.json');
+const BearerStrategy = require('passport-azure-ad').BearerStrategy;
 
-  context.log('Getting Subscriptions...');
-
-  // Generate query
-  let query = '';
-
-  if (req.query.name) {
-    //query = new RegExp('^' + req.query.name, 'i');
-    query = req.query.name.toLowerCase();
-  }
-
-  // Get subscriptions based on orgId
-  // Temporarily use static userIdentifier instead of claims for dev
-  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
-
-  try {
-    const orgSubscriptions = await Organization.findOne({ name: userIdentifier }).populate(
-      'subscriptions'
-    );
-
-    let subscriptions;
-
-    if (query && orgSubscriptions) {
-      filteredSubscriptions = orgSubscriptions.subscriptions.filter((subscription) =>
-        subscription.name.startsWith(query)
-      );
-      return {
-        status: 200,
-        body: filteredSubscriptions,
-      };
-    } else if (orgSubscriptions) {
-      return {
-        status: 200,
-        body: orgSubscriptions.subscriptions,
-      };
-    } else {
-      return {
-        status: 404,
-        body: 'No organization found!',
-      };
-    }
-  } catch (err) {
-    context.log(err);
-    return {
-      status: 500,
-      body: 'An error occured processing requests.',
-    };
-  }
+const options = {
+  identityMetadata: `https://${auth.credentials.tenantName}.b2clogin.com/${auth.credentials.tenantName}.onmicrosoft.com/${auth.policies.policyName}/${auth.metadata.version}/${auth.metadata.discovery}`,
+  clientID: auth.credentials.clientID,
+  audience: auth.credentials.clientID,
+  policyName: auth.policies.policyName,
+  isB2C: auth.settings.isB2C,
+  validateIssuer: auth.settings.validateIssuer,
+  loggingLevel: auth.settings.loggingLevel,
+  passReqToCallback: auth.settings.passReqToCallback,
 };
+
+const bearerStrategy = new BearerStrategy(options, (token, done) => {
+  // Send user info using the second argument
+  done(null, {}, token);
+});
+
+app.use(passport.initialize());
+
+passport.use(bearerStrategy);
+
+app.get(
+  '/api/subscriptions',
+  passport.authenticate('oauth-bearer', { session: false }),
+  async (req, res) => {
+    try {
+      const subscriptions = await getSubscriptions(req, res);
+      res.status(subscriptions.status).json(subscriptions.body);
+    } catch (err) {
+      res.status(err.status).json(err.body);
+    }
+  }
+);
+
+module.exports = createHandler(app);
