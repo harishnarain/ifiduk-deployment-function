@@ -1,48 +1,44 @@
-const db = require('../config/dbConfig');
+const express = require('express');
+const createHandler = require('azure-function-express').createHandler;
+const passport = require('passport');
+const app = express();
+app.use(require('body-parser').urlencoded({ extended: true }));
 
-module.exports = async function (context, req) {
-  const Organization = require('../models/Organization');
-  db();
+const { getOrganizations } = require('../controllers/OrganizationController');
+const auth = require('../config/auth.json');
+const BearerStrategy = require('passport-azure-ad').BearerStrategy;
 
-  context.log('Getting Organization...');
-
-  // Check if organization name exists
-  // Extract email from user claims
-  // Temporarily providing in query params for dev
-  let email;
-  if (req.query.email) {
-    email = req.query.email;
-  } else {
-    return {
-      status: 400,
-      body: 'No query parameter found!',
-    };
-  }
-  const userIdentifier = '05d0ae08-ecb9-4054-9025-90410ac6f164';
-
-  // Find oid in organizations collections name field
-  try {
-    const org = await Organization.findOne({ name: userIdentifier });
-    if (org) {
-      return {
-        status: 200,
-        body: {
-          _id: org._id,
-          name: org.name,
-          technicalContact: org.technicalContact,
-          subscriptions: org.subscriptions,
-        },
-      };
-    }
-
-    return {
-      status: 404,
-      body: 'No organization found!',
-    };
-  } catch (err) {
-    return {
-      status: 500,
-      body: 'An error occured processing requests.',
-    };
-  }
+const options = {
+  identityMetadata: `https://${auth.credentials.tenantName}.b2clogin.com/${auth.credentials.tenantName}.onmicrosoft.com/${auth.policies.policyName}/${auth.metadata.version}/${auth.metadata.discovery}`,
+  clientID: auth.credentials.clientID,
+  audience: auth.credentials.clientID,
+  policyName: auth.policies.policyName,
+  isB2C: auth.settings.isB2C,
+  validateIssuer: auth.settings.validateIssuer,
+  loggingLevel: auth.settings.loggingLevel,
+  passReqToCallback: auth.settings.passReqToCallback,
 };
+
+const bearerStrategy = new BearerStrategy(options, (token, done) => {
+  // Send user info using the second argument
+  done(null, {}, token);
+});
+
+app.use(passport.initialize());
+
+passport.use(bearerStrategy);
+
+app.get(
+  '/api/organizations',
+  passport.authenticate('oauth-bearer', { session: false }),
+  async (req, res) => {
+    try {
+      const organizations = await getOrganizations(req, res);
+      res.status(organizations.status).json(organizations.body);
+    } catch (err) {
+      res.status(err.status).json(err.body);
+    }
+  }
+);
+
+module.exports = createHandler(app);
