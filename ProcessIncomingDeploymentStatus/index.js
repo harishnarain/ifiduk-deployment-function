@@ -13,7 +13,12 @@ module.exports = async function (context, deploymentStatusMessage) {
     const subscription = await Subscription.findById(deploymentStatusMessage.subscriptionId);
 
     subscription.status = deploymentStatusMessage.status;
-    await subscription.save();
+
+    if (subscription.status === 'Deleted') {
+      await Subscription.deleteOne({ _id: subscription._id });
+    } else if (subscription.status === 'Running') {
+      await subscription.save();
+    }
   } catch (err) {
     context.log(`An error occured updating subscription status: ${err}`);
   }
