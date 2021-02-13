@@ -20,6 +20,19 @@ exports.getSubscriptions = async (req, res) => {
   // Get subscriptions based on orgId
   const userIdentifier = req.authInfo.oid;
 
+  // Update org name with oid
+  try {
+    const orgs = await Organization.updateOne(
+      { name: req.authInfo.emails[0] },
+      { name: req.authInfo.oid }
+    );
+  } catch (err) {
+    return {
+      status: 500,
+      body: 'An error occurred processing request.',
+    };
+  }
+
   try {
     const orgSubscriptions = await Organization.findOne({ name: userIdentifier }).populate(
       'subscriptions'
@@ -72,6 +85,19 @@ exports.createSubscription = async (req, res) => {
 
   // Extract oid from user claims
   const userIdentifier = req.authInfo.oid;
+
+  // Update org name with oid
+  try {
+    const orgs = await Organization.updateOne(
+      { name: req.authInfo.emails[0] },
+      { name: req.authInfo.oid }
+    );
+  } catch (err) {
+    return {
+      status: 500,
+      body: 'An error occurred processing request.',
+    };
+  }
 
   // Extract org based on oid
   let org;
